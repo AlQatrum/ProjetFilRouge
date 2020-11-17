@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 12 15:32:34 2020
+
+@author: roulletagathe
+"""
+
+import pandas as pds
+import numpy as np
+import sklearn 
+print(sklearn.__version__)
+from sklearn.linear_model import LassoCV
+
+from matplotlib import pyplot as plt
+from scipy.cluster.hierarchy import dendrogram
+from sklearn.datasets import load_iris
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.feature_selection import SelectFromModel
+
+file = pds.read_csv("genus_level2.csv", index_col = 0, sep =",")
+df  = pds.read_excel ("age_and_gender_jap.xlsx", index_col = 0)
+df_inverse = np.transpose(df)
+combined_csv = pds.concat([file,df_inverse])
+df = combined_csv
+
+df = df.drop(["gender", "BioSample No.", "number of high quality \nreads for 16S microbiota analysis " ])
+
+bd_final = df.drop(["age"])
+bd_final = np.transpose(bd_final)
+
+X = bd_final
+Y = df.iloc[-1,:]
+
+feature_names = list(bd_final)
+
+
+clf = LassoCV(cv = 5).fit(X, Y)
+importance = np.abs(clf.coef_)
+
+
+idx_third = importance.argsort()[-3]
+threshold = importance[idx_third] + 0.01
+
+idx_features = (-importance).argsort()[:10]
+name_features = np.array(feature_names)[idx_features]
+print('Selected features: {}'.format(name_features))
