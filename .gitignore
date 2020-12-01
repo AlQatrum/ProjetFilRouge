@@ -129,4 +129,5 @@ dmypy.json
 .pyre/
 
 # Added manually
-Data/WWorkData/
+Data/WorkData/
+
