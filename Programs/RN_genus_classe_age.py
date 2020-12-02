@@ -22,7 +22,7 @@ from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(X,Y)
 
 from sklearn.neural_network import MLPClassifier
-mlp = MLPClassifier(hidden_layer_sizes=(120,120,120,120))
+mlp = MLPClassifier(hidden_layer_sizes=(100,100,100))
 
 mlp.fit(X_train,Y_train)
 predictions = mlp.predict(X_test)
