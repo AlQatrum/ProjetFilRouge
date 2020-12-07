@@ -13,7 +13,7 @@ colnames(individus)<- c('Subject','age','gender','classe_age')
 print(head(individus))
 
 
-#table des echantillons en genre, inversement des colonnes et des lignes, ajout de l'âge
+#table des echantillons en espece, inversement des colonnes et des lignes, ajout de l'Ã¢ge
 echantillons_g<- read.csv("genus_level2.csv", sep=',', dec='.', header=TRUE)
 echantillons_genus <- data.frame(t(echantillons_g[-1]))
 colnames(echantillons_genus) <- echantillons_g[, 1]
@@ -21,7 +21,7 @@ colnames(echantillons_genus) <- echantillons_g[, 1]
 variables <- select(echantillons_genus, -(1:4))
 
 
-#matrice des corrélations
+#matrice des corrÃ©lations
 correlation <- cor(variables)
 corrplot(correlation, is.corr=FALSE)
 
@@ -40,11 +40,11 @@ for (l in 1:nrow(correlation)){
   }
 } 
 
-write.csv(correlation_signif, "correlation_significatives_classes_age.csv")
+write.csv(correlation_signif, "correlation_significatives_classes_age_especes.csv")
 
 
 
-#test significativité
+#test significativitÃ©
 
 test_correlation <- rcorr(as.matrix(variables),type=c("pearson","spearman"))
 
@@ -63,5 +63,5 @@ correlation_pvalue <- flattenCorrMatrix(test_correlation$r, test_correlation$P)
 
 correlation_pvalue <- filter(correlation_pvalue , p <= 0.05)
 correlation_pvalue <- filter(correlation_pvalue, cor>0.5)
-saveRDS(correlation_pvalue, "table_paires_genres_correles_signif.rds")
+saveRDS(correlation_pvalue, "table_paires_especes_correles_signif.rds")
 
