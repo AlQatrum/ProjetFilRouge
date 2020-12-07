@@ -12,7 +12,7 @@ colnames(individus)<- c('Subject','age','gender','classe_age')
 print(head(individus))
 
 
-#table des echantillons en genre, inversement des colonnes et des lignes, ajout de l'âge
+#table des echantillons en especes, inversement des colonnes et des lignes, ajout de l'Ã¢ge
 echantillons_s<- read.csv("species_level_table.csv", sep=',', dec='.', header=TRUE)
 echantillons_species <- data.frame(t(echantillons_s[-1]))
 colnames(echantillons_species) <- echantillons_s[, 1]
@@ -201,7 +201,7 @@ dimension50 <- filter(dimension50, Dim.50>1)
 
 typeof(variables_)
 
-#selection des genres
+#selection des especes
 
 liste_dimension<-c(list(row.names(dimension1)),row.names(dimension2),row.names(dimension3),row.names(dimension4),row.names(dimension5),row.names(dimension6),row.names(dimension7),row.names(dimension8),row.names(dimension9),row.names(dimension10),row.names(dimension11),row.names(dimension12),row.names(dimension13),row.names(dimension14),row.names(dimension15),row.names(dimension16),row.names(dimension17),row.names(dimension18),row.names(dimension19),row.names(dimension20),row.names(dimension21),row.names(dimension22),row.names(dimension23),row.names(dimension24),row.names(dimension25),row.names(dimension26),row.names(dimension27),row.names(dimension28),row.names(dimension29),row.names(dimension30),row.names(dimension31),row.names(dimension32),row.names(dimension33),row.names(dimension34),row.names(dimension35),row.names(dimension36),row.names(dimension37),row.names(dimension38),row.names(dimension39),row.names(dimension40),row.names(dimension41),row.names(dimension42),row.names(dimension43),row.names(dimension44),row.names(dimension45),row.names(dimension46),row.names(dimension47),row.names(dimension48),row.names(dimension49),row.names(dimension50))
 
