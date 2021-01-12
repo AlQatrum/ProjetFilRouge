@@ -1,5 +1,7 @@
 ########################################## Description ##############################################
-#
+# This scripts aims to save PCA results for genus and species level. It creates RDS files of PCA    #
+# results. It also does PCA splitting the individual sex in male/female. No age classes implemented #
+# for now.                                                                                          #
 #####################################################################################################
 
 
