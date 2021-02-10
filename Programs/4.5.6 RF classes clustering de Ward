@@ -25,52 +25,66 @@ from sklearn.preprocessing import KBinsDiscretizer
 from statistics import *
 
 
-
+#importation des données de genre
 file = pds.read_csv("genus_level2.csv", index_col = 0, sep =",")
 
+#importation de la table des individus
 df  = pds.read_excel ("age_and_gender_jap.xlsx", index_col = 0)
+#modification des tables (transposition et fusion)
 df_inverse = np.transpose(df)
 combined_csv = pds.concat([file, df_inverse])
 df = combined_csv
+#suppression des colonnes sans intérêt
 df = df.drop(["gender", "BioSample No.", "number of high quality \nreads for 16S microbiota analysis " ])
 df = np.transpose(df)
 
+#initialisation d'une liste vide pour stocker les score de chaque itération
 score_RF=[]
-score_RN=[]
 
+#création de 3 bases pour les trois classes
+#bébé : 0 à 1,5 ans
+#adulte : 1,5 à 85 ans
+#sénior : 85 ans et plus
 base_1=df[df["age"]<1.5]
 base_2=df[df["age"]>=90]
 base_3=df[(df["age"]>=1.5) & (df["age"]<90)]
+#concaténation des trois bases
 bd_final=pds.concat([base_1, base_2, base_3])
 
-
+#suppression de l'âge pour la table des variables explicatives du modèle
 X=bd_final.drop(["age"], axis=1)
 
+#ne conserver que l'âge pour la table des étiquettes
 bd_Y = np.transpose(bd_final)
 Y=bd_Y.iloc[-1,:]
 
+#parcours de la table des étiquettes pour ajouter un nom à la classe
 for i in range(0,len(Y)):
     if Y[i]<1.5 : 
         Y.iloc[i]= str("bebe")
     elif Y[i]>=85 :
-        Y.iloc[i]= str("vieux")
+        Y.iloc[i]= str("sénior")
     else:
         Y.iloc[i]= str("adulte")
 
-
+#boucle for pour faire 30 itérations
 for i in range(0,30):
+    
+    #séparation des données en ensemble d'apprentissage et de test (70%-30%)
     X_train, X_test, y_train, y_test = train_test_split(X, Y.astype(str), test_size = 0.3)
     
     feature_names = list(bd_final)
     print(feature_names)
     
     
-    ##random forest
+    ##random forest avec nombre d'arbre par défaut
     from sklearn.datasets import make_classification
     clf = RandomForestClassifier()
     clf.fit(X_train, y_train)
+    #affichage du score
     print("score sur ensemble de test RF avec classe",clf.score(X_test, y_test))
     
+    #selection des variables qui jouent un rôle plus important dans la construction du modèle
     importance = clf.feature_importances_
     idx_third = importance.argsort()[-3]
     threshold = importance[idx_third] + 0.01
@@ -78,6 +92,8 @@ for i in range(0,30):
     idx_features = (-importance).argsort()[:5]
     name_features = np.array(feature_names)[idx_features]
     print('Selected features Random Forest : {}'.format(name_features))
+    
+    #affichage de la matrice de confusion, du score de précision et de la table des classifications
     score1 = clf.score(X_test, y_test)
     predictions1 = clf.predict(X_test)
     from sklearn.metrics import classification_report, confusion_matrix
@@ -85,16 +101,22 @@ for i in range(0,30):
     print(score1)
     print(classification_report(y_test,predictions1))
     
+    #ajout du score à la liste des scores
     score_RF.append(score1)
     
-    #matrice de confusion
+    #plot de matrice de confusion
+    plt.rcParams.update({'font.size': 12})
     sklearn.metrics.plot_confusion_matrix(clf, X_test, y_test, cmap=plt.cm.Blues)
     
-    #age des mal classes
+    #trouver l'âge des individus mal classés
+    #table avec l'âge des individus
     bd_age=bd_final[["age"]]
     bd_age=bd_age.add_suffix('_reel')
+    #ajout de la classe à laquelle il appatient
     pred=pds.concat([y_test,bd_age],axis=1,join="inner")
+    #ajout de la classe prédite
     pred.insert(2, "classe_predite", predictions1, True)
+    #sélection des individus mal classés
     pred= pred.drop(pred[pred.age==pred.classe_predite].index)
 
 
