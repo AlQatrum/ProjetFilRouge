@@ -1,19 +1,23 @@
+#importation des library
 library("readxl")
 library("FactoMineR")
 library("factoextra")
 
+#importation des donn√©es
 data_age = read_excel("C:/Users/Hello/Desktop/IODAA/fil_rouge/age_and_gender_jap.xlsx")
 data_jap = read_excel("C:/Users/Hello/Desktop/IODAA/fil_rouge/to_AIRE.xlsx")
 
 rownames(data_jap)=data_jap$index
 data_jap$index=NULL
 
+#ne fonctionne pas
 ratio=mapply('/', data_jap, data_jap)
 
 
-
+#on construit les tableaux √† remplir
 df=data.frame()
 l=c()
+#on construit tout les ratio !!! LONG TEMPS DE CALCUL
 for (i in rownames(data_jap)){
   for (j in rownames(data_jap)){
     df=rbind(df, (data_jap[i,]*1000)/(data_jap[j,]*1000))
@@ -21,28 +25,29 @@ for (i in rownames(data_jap)){
   }}
 rownames(df)=l
 
+#on enregistre
 write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre.csv")
 
+#on supprime les NA
 is.nan.data.frame <- function(x)
   do.call(cbind, lapply(x, is.nan))
-
 df[is.nan(df)] <- 0
-
 df[df=="Inf"] <- 0
-
 df=df[rowSums(df[])>0,]
 
-write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_triÈ.csv")
+write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_tri√©.csv")
+
+#on ajoute les ages
 df=rbind(df ,data$age)
 rownames(df)[rownames(df) == "11364"]="age"
-write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_triÈ_avec_age.csv")
+write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_tri√©_avec_age.csv")
 
-
+#transpose et enregistrement
 df=t(df)
-write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_triÈ_avec_age_transpose.csv")
+write.csv(df, "C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_tri√©_avec_age_transpose.csv")
 
 
-
+#minor corrections
 df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|__|__|__|__|__"] <- as.numeric(df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|__|__|__|__|__"]) 
 df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Actinomycetales|f__Actinomycetaceae|g__Actinomyces"] <- as.numeric(df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Actinomycetales|f__Actinomycetaceae|g__Actinomyces"])
 df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Actinomycetales|f__Propionibacteriaceae|g__Propionibacterium"] <- as.numeric(df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Actinomycetales|f__Propionibacteriaceae|g__Propionibacterium"])
@@ -50,8 +55,9 @@ df[,"k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobac
 df[, "k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Bifidobacteriales|f__Bifidobacteriaceae|g__Bifidobacterium"]<- as.numeric(df[, "k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Actinobacteria|o__Bifidobacteriales|f__Bifidobacteriaceae|g__Bifidobacterium"])
 df[, "k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Coriobacteriia|o__Coriobacteri"]<- as.numeric(df[, "k__Bacteria|__|__|__|__|__ _div_ k__Bacteria|p__Actinobacteria|c__Coriobacteriia|o__Coriobacteri"])                                                                                                                                                     
        
-df =read.table("C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_triÈ_avec_age_transpose.csv")
-                                                                                                                                              
+df =read.table("C:/Users/Hello/Desktop/IODAA/fil_rouge/ratio_genre_tri√©_avec_age_transpose.csv")
+ 
+#ACP
 res.pca <- PCA(df, graph = TRUE)
 eig.val <- get_eigenvalue(res.pca)
 fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 50))
