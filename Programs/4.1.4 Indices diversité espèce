@@ -29,3 +29,7 @@ boxplot(echantillons_d_s['shannon_index'][echantillons_d_s['classe_age']=="1"], 
 #test de significativité par analyse de la variance : anova
 test_shan<-aov(classe_age ~ shannon_index, data=echantillons_d_g)
 test_eve<-aov(classe_age ~ evenness_index, data=echantillons_d_g)
+
+#affichage des tests statistiques
+summary(test_shan)
+summary(test_eve)
