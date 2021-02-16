@@ -23,7 +23,7 @@ colnames(echantillons_species) <- echantillons_s[, 1]
 
 #corrélation avec test de significativité 
 
-test_correlation <- rcorr(as.matrix(variables),type=c("pearson","spearman"))
+test_correlation <- rcorr(as.matrix(echantillons_species),type=c("pearson","spearman"))
 
 
 #fonction qui permet d'aplatir la matrice de corrélation
