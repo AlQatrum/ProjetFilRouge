@@ -4,6 +4,7 @@ library(tidyverse)
 library(dplyr)
 library(corrplot)
 library(FactoMineR)
+library(factoextra)
 library(Hmisc)
 
 #importation de la table des individus depuis le presse papier
