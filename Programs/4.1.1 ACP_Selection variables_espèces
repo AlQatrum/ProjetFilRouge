@@ -4,6 +4,7 @@ library(tidyverse)
 library(dplyr)
 library(corrplot)
 library(FactoMineR)
+libraty(factoextra)
 library(Hmisc)
 
 #importation de la table des individus depuis le presse papierindividus <- read.table(file = "clipboard", sep = "\t", header=TRUE)
