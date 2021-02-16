@@ -4,26 +4,23 @@ library(tidyverse)
 library(dplyr)
 library(corrplot)
 library(FactoMineR)
-libraty(factoextra)
+library(factoextra)
 library(Hmisc)
 
-#importation de la table des individus depuis le presse papierindividus <- read.table(file = "clipboard", sep = "\t", header=TRUE)
+#importation de la table des individus depuis le presse papier
+individus <- read.table(file = "clipboard", sep = "\t", header=TRUE)
 colnames(individus)<- c('Subject','age','gender','classe_age')
 print(head(individus))
 
 
-#table des echantillons en espèce, inversement des colonnes et des lignes, ajout de l'âge
-echantillons_s<- read.csv("species_level_table.csv", sep=',', dec='.', header=TRUE)
-echantillons_species <- data.frame(t(echantillons_s[-1]))
-colnames(echantillons_species) <- echantillons_s[, 1]
+#importation données sur le genre et sélection des colonnes d'intérêt
+table_espece <- read.csv("table_age_1_sex_espece_diversite_VF.csv", sep=",", dec=".", header=TRUE)
+table_espece<- select(table_espece, -c(1,2,3, 4, 5, 76, 77))
 
-echantillons_species <- cbind(echantillons_species, row=row.names(echantillons_species))
-echantillons_species <- merge(individus, echantillons_species, by.x="Subject", by.y='row')
+#ajout de la colonne classe d'âge
+classe_age<-select(individus, 4)
+table_acp<-cbind(classe_age, table_espece)
 
-
-
-#recupération des colonnes d'intérêt
-table_acp <- select(echantillons_species, -(1:3))
 
 #ACP
 res_acp <- PCA(table_acp, ncp=50, graph=FALSE)
@@ -131,7 +128,7 @@ dimension24 <- filter(dimension24, Dim.24>1)
 
 dimension25 <- select(variables_, Dim.25)
 dimension25 <- filter(dimension25, Dim.25>1)
- 
+
 dimension26 <- select(variables_, Dim.26)
 dimension26 <- filter(dimension26, Dim.26>1)
 
