@@ -129,6 +129,6 @@ dmypy.json
 .pyre/
 
 # Added manually
-Data/WorkData/
+Data/
 
 Programs/.Rhistory
