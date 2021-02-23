@@ -57,24 +57,6 @@ dev.off()
 
 ####################################################
 
-SpeciesMclust <- Mclust(data = SpeciesData[,-c(1,2,3)], G =  2:20)
-SpeciesClassif <- bind_cols(Cluster = SpeciesMclust$classification, SpeciesData)
-
-heatmap.2(x = SpeciesClassif %>% filter(Cluster == 2) %>% .[,-c(1,2,3,4)] %>% as.matrix(), trace = 'none', main  = , labRow = '')
-
-
-
-
-
-
-
-
-GenusMclust$classification
-
-
-
-GenusAgeByCluster <- bind_cols(GenusData[,c(1,2,3)], Cluster = GenusKMeans$cluster)
-boxplot(GenusAgeByCluster[,-c(1,3)])
 
 
 
