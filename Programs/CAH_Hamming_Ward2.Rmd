@@ -1,0 +1,117 @@
+---
+title: "CAH sur les classes d'âges de l'article avec diversité"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages utilisés
+```{r packages, message = FALSE}
+library(ggplot2)
+library(tidyverse)
+library(viridisLite)
+library(viridis)
+library(knitr)
+```
+
+# Importation de la table
+```{r importation table}
+table_age_sex_genre_2_cah_result_orange <- read.delim("~/Documents/table_age_sex_genre_2_cah_result_orange.tab", stringsAsFactors=TRUE)
+
+table_age_sex_genre_2_cah_result_orange$age <- factor(table_age_sex_genre_2_cah_result_orange$age, levels = c("Preweaning", "Weaning", "Weaned - 3", "4 - 9", "10 - 19", "20 - 29", "30 - 39", "40 - 49", "50 - 59", "60 - 69", "70 - 79", "80 - 89", "90 - 99", "100 +"))
+
+nb_cluster = 3
+```
+
+```{r}
+resultats <- table_age_sex_genre_2_cah_result_orange %>%
+  group_by(Cluster, .drop = FALSE) %>%
+  count(age)
+
+table_age_sex_genre_2_cah_result_orange %>%
+  count(age)
+```
+
+```{r}
+total_Clusters <- dplyr:: count(table_age_sex_genre_2_cah_result_orange, Cluster)
+
+proportion_resultats <- resultats %>%
+  group_by(Cluster)%>%
+  mutate(pourcentage_par_cluster = n/sum(n)*100)
+
+proportion_resultats <- proportion_resultats %>%
+  group_by(age)%>%
+  mutate(pourcentage_par_classe_age = n/sum(n)*100)
+```
+
+
+# Graphes
+
+```{r}
+ggplot(resultats) +
+  geom_bar(aes(x = age, y = n, fill = Cluster),
+           stat = "identity") +
+  scale_fill_grey() +
+  facet_wrap(~ Cluster) +
+  coord_flip() + theme_bw()+
+  scale_y_continuous(name="nombre d'individus")
+```
+
+```{r donut repartition des clusters selon les classes d ages}
+# Calcul les poucentages cumulés (haut de chaque rectangle)
+proportion_resultats_age <- proportion_resultats %>%
+  group_by(age)%>%
+  mutate(ymax = cumsum(pourcentage_par_classe_age))
+
+# Calcul le bas de chaque rectangle
+proportion_resultats_age$ymin = c(rep(0, 14), head(proportion_resultats_age$ymax, n = -14))
+
+# Calcul la position des étiquettes
+proportion_resultats_age$labelPosition <- (proportion_resultats_age$ymax + proportion_resultats_age$ymin) / 2
+
+# Étiquettes
+proportion_resultats_age$label <- round(proportion_resultats_age$pourcentage_par_classe_age,2)
+
+# Graphe
+ggplot(proportion_resultats_age)+
+  aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = Cluster)+
+  geom_rect()+
+  geom_text(x=6, aes(y=labelPosition, label=ifelse(label <2.75, NA, label), color=Cluster), size=2) + 
+  scale_fill_manual(values = viridis(nb_cluster))+
+  scale_color_manual(values = viridis(nb_cluster))+
+  coord_polar(theta="y") +
+  xlim(c(-1, 6)) +
+  theme_void() +
+  facet_wrap(~ age, ncol = 5)
+
+#ggsave('Resultats_clustering_hamming_ward_donut.png',width=12, height=8, units = 'cm')
+```
+
+
+
+
+# Boxplot sur l'âge (continu) selon les Clusters
+
+```{r}
+res.kruskal <- table_age_sex_genre_2_cah_result_orange %>% kruskal_test(age2~Cluster)
+
+pwc <- table_age_sex_genre_2_cah_result_orange %>% 
+  dunn_test(age2 ~ Cluster, p.adjust.method = "bonferroni") 
+pwc <- pwc %>% add_xy_position(x = "Cluster")
+
+means <- aggregate(age2 ~  Cluster, table_age_sex_genre_2_cah_result_orange, median)
+means$age2 <- signif(means$age2,digits = 2)
+
+ggboxplot(table_age_sex_genre_2_cah_result_orange, x = "Cluster", y = "age2", color="Cluster") +
+  stat_pvalue_manual(pwc, hide.ns = TRUE) +
+  scale_color_manual(values=viridis(nb_cluster))+
+  labs(
+    subtitle = get_test_label(res.kruskal, detailed = TRUE),
+    caption = get_pwc_label(pwc))+
+  scale_x_discrete(name ="Cluster")+
+  scale_y_continuous(name="Age (années)")+
+  geom_text(data = means, aes(label = age2, y = age2 + 5))
+ggsave('Resultats_clustering_hamming_ward_boxplot.png',width=12, height=10, units = 'cm')
+```

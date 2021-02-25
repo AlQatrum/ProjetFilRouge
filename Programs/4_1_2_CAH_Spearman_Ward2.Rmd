@@ -1,0 +1,441 @@
+---
+title: "CAH sur les classes d'âges de l'article avec diversité"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages utilisés
+```{r packages, message = FALSE}
+library(ggplot2)
+library(ggrepel)
+library(bioDist)
+library(tidyverse)
+library(viridisLite)
+library(viridis)
+library(knitr)
+library(glmnet)
+library(parallel)
+library(randomForest)
+library(rstatix)
+library(ggpubr)
+library(caret)
+library(e1071)
+```
+
+# Importation de la table
+```{r importation table}
+table_age_sex_genre_diversite <- read.csv("~/Library/Mobile Documents/com~apple~CloudDocs/3A/Projet fil rouge/table_age_1_sex_genre_diversite.csv", row.names=1)
+table_age_sex_genre_diversite$age <- as.factor(table_age_sex_genre_diversite$age)
+table_age_sex_genre_diversite$gender <- as.factor(table_age_sex_genre_diversite$gender)
+```
+
+# CAH avec distance de spearman 
+```{r}
+# Calcul de la matrice de distance (spearman)
+mat_dist_spearman <- spearman.dist(as.matrix(table_age_sex_genre_diversite[,- c(1:4)]))
+
+# CAH avec linkage ward au carré
+cah.ward <- hclust(mat_dist_spearman, method = "ward.D2")
+```
+
+# Calcul d'inertie intra et intergroupe
+```{r}
+inertie <- sort(cah.ward$height, decreasing = TRUE)
+
+png('Resultats_clustering_spearman_ward_inertie.png')
+plot(inertie[1:20], type = "s", xlab = "Nombre de classes", ylab = "Inertie")
+dev.off()
+```
+
+# Dendogramme
+```{r}
+png('Resultats_clustering_spearman_ward_dendogramme.png')
+
+# Affichage du dendrogramme
+plot(cah.ward, labels = F)
+
+# Découpage en 4 classes
+rect.hclust(cah.ward, k = 4)
+groupes.cah <- cutree(cah.ward, k = 4)
+
+dev.off()
+```
+
+
+# Manipulation des résultats
+```{r table avec groupe et age}
+table_cluster <- table_age_sex_genre_diversite[1:4]
+table_cluster$groupe <- groupes.cah
+table_cluster$groupe <- as.factor(table_cluster$groupe)
+table_cluster$age <- factor(table_cluster$age, levels = c("Preweaning", "Weaning", "Weaned - 3", "4 - 9", "10 - 19", "20 - 29", "30 - 39", "40 - 49", "50 - 59", "60 - 69", "70 - 79", "80 - 89", "90 - 99", "100 +"))
+```
+
+```{r}
+resultats <- table_cluster %>%
+  group_by(groupe, .drop = FALSE) %>%
+  count(age)
+```
+
+```{r}
+total_groupes <- dplyr:: count(table_cluster, groupe)
+
+proportion_resultats <- resultats %>%
+  group_by(groupe)%>%
+  mutate(pourcentage_par_cluster = n/sum(n)*100)
+
+proportion_resultats <- proportion_resultats %>%
+  group_by(age)%>%
+  mutate(pourcentage_par_classe_age = n/sum(n)*100)
+```
+
+
+# Graphes
+```{r}
+ggplot(resultats) +
+    aes(x = groupe, y = n, fill = age, label = n) +
+    geom_bar(position = position_dodge(0.8), stat = "identity") +
+    geom_text(aes(label = n, group = age), position = position_dodge(0.8), vjust = - 0.5, size = 1.5) +
+    scale_fill_manual(values = viridis(14))+
+    theme_classic()
+#ggsave('Resultats_clustering_spearman_ward_fig2.png',width=12, height=10, units = 'cm')
+```
+
+```{r}
+ggplot(resultats) +
+  geom_bar(aes(x = age, y = n, fill = groupe),
+           stat = "identity") +
+  scale_fill_grey() +
+  facet_wrap(~ groupe) +
+  coord_flip() + theme_bw()
+```
+
+
+```{r donut repartition des clusters selon les classes d ages}
+# Calcul les poucentages cumulés (haut de chaque rectangle)
+proportion_resultats_age <- proportion_resultats %>%
+  group_by(age)%>%
+  mutate(ymax = cumsum(pourcentage_par_classe_age))
+
+# Calcul le bas de chaque rectangle
+proportion_resultats_age$ymin = c(rep(0, 14), head(proportion_resultats_age$ymax, n = -14))
+
+# Calcul la position des étiquettes
+proportion_resultats_age$labelPosition <- (proportion_resultats_age$ymax + proportion_resultats_age$ymin) / 2
+
+# Étiquettes
+proportion_resultats_age$label <- round(proportion_resultats_age$pourcentage_par_classe_age,2)
+
+# Graphe
+ggplot(proportion_resultats_age)+
+  aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = groupe)+
+  geom_rect()+
+  geom_text(x=6, aes(y=labelPosition, label=ifelse(label <2.75, NA, label), color=groupe), size=2) + 
+  scale_fill_manual(values = viridis(4))+
+  scale_color_manual(values = viridis(4))+
+  coord_polar(theta="y") +
+  xlim(c(-1, 6)) +
+  theme_void() +
+  facet_wrap(~ age, ncol = 5)
+
+ggsave('Resultats_clustering_spearman_ward_donut.png',width=12, height=8, units = 'cm')
+```
+
+```{r donut repartition des classes d ages selon les cluster}
+# Calcul les poucentages cumulés (haut de chaque rectangle)
+proportion_resultats_cluster <- proportion_resultats %>%
+  group_by(groupe)%>%
+  mutate(ymax = cumsum(pourcentage_par_cluster))
+
+# Calcul le bas de chaque rectangle
+proportion_resultats_cluster$ymin = c(0, proportion_resultats_cluster$ymax[1:13], 0, proportion_resultats_cluster$ymax[15:27], 0,proportion_resultats_cluster$ymax[29:41], 0, proportion_resultats_cluster$ymax[43:55])
+
+# Calcul la position des étiquettes
+proportion_resultats_cluster$labelPosition <- (proportion_resultats_cluster$ymax + proportion_resultats_cluster$ymin) / 2
+
+# Étiquettes
+proportion_resultats_cluster$label <- round(proportion_resultats_cluster$pourcentage_par_cluster,2)
+
+```
+
+```{r }
+table_pourcentage_cluster <- proportion_resultats_cluster[, c(1,2, 4)] %>%
+  tidyr::spread(groupe, pourcentage_par_cluster)
+
+total <- table_pourcentage_cluster[,-1] %>%
+  summarise_each(sum)
+
+total <- c('Total', total)
+names(total)<-names(table_pourcentage_cluster)
+
+levels(table_pourcentage_cluster$age) <- c(levels(table_pourcentage_cluster$age), 'Total')
+
+table_pourcentage_cluster <- rbind(table_pourcentage_cluster, total)
+
+#kable(table_pourcentage_cluster)
+```
+
+
+# Recherche classe 80-89
+```{r}
+ggplot(table_cluster[table_cluster$age2 > 79,])+
+  aes(x=age, y=age2, color=groupe)+
+  scale_color_manual(values=viridis(4))+
+  geom_jitter()
+```
+
+```{r}
+ggplot(table_cluster[table_cluster$age2 > 79,])+
+  aes(x=groupe, y= age2, color=groupe)+
+  scale_color_manual(values=viridis(3))+
+  geom_boxplot()
+```
+
+# Boxplot sur l'âge (continu) selon les groupes
+
+```{r}
+res.kruskal <- table_cluster %>% kruskal_test(age2~groupe)
+
+pwc <- table_cluster %>% 
+  dunn_test(age2 ~ groupe, p.adjust.method = "bonferroni") 
+pwc <- pwc %>% add_xy_position(x = "groupe")
+
+means <- aggregate(age2 ~  groupe, table_cluster, median)
+means$age2 <- signif(means$age2,digits = 2)
+
+ggboxplot(table_cluster, x = "groupe", y = "age2", color="groupe") +
+  stat_pvalue_manual(pwc, hide.ns = TRUE) +
+  scale_color_manual(values=viridis(4))+
+  labs(
+    subtitle = get_test_label(res.kruskal, detailed = TRUE),
+    caption = get_pwc_label(pwc))+
+  scale_x_discrete(name ="Âge median du groupe", breaks=c("1","2","3", "4"),
+        labels=c("38", "83", "0.42", "30"))+
+  scale_y_continuous(name="Age (années)")+
+  geom_text(data = means, aes(label = age2, y = age2 + 5))
+ggsave('Resultats_clustering_spearman_ward_boxplot.png',width=12, height=10, units = 'cm')
+```
+
+
+# Lasso pour voir les genres les plus impliqués dans chaque groupe 
+## Groupe 1 (age median 38)
+```{r}
+groupe1 <- table_age_sex_genre_diversite[table_cluster$groupe == 1, ]
+X=as.matrix(groupe1[,-c(1:4)])
+Y=as.numeric(groupe1[,3])
+
+
+###### Stability selection
+n=length(Y)
+p=dim(X)[2]
+nb_cores=4
+nb_repli=1000
+
+stabsel.glmnet <- function(i) 
+{
+  cat("+")
+  b_sort <- sort(sample(1:n,floor(n/2)))
+  resultat_glmnet=glmnet(X[b_sort,],Y[b_sort],family="gaussian",alpha=1)
+  nb_colonnes=dim(resultat_glmnet$beta)[2]
+  ind_glmnet=which(resultat_glmnet$beta[,nb_colonnes]!=0)
+  return(tabulate(ind_glmnet,p))
+}
+res.cum <- Reduce("+", mclapply(1:nb_repli, stabsel.glmnet, mc.cores=nb_cores))
+
+freq=res.cum/nb_repli
+
+ind_glmnet=which(freq>0.5)
+
+liste_genre_groupe_1 <- colnames(X)[ind_glmnet]
+```
+
+
+## Groupe 2 (age moyen 83)
+```{r}
+groupe2 <- table_age_sex_genre_diversite[table_cluster$groupe == 2, ]
+X=as.matrix(groupe2[,-c(1:4)])
+Y=as.numeric(groupe2[,3])
+
+
+###### Stability selection
+n=length(Y)
+p=dim(X)[2]
+nb_cores=4
+nb_repli=1000
+
+res.cum <- Reduce("+", mclapply(1:nb_repli, stabsel.glmnet, mc.cores=nb_cores))
+
+freq=res.cum/nb_repli
+
+ind_glmnet=which(freq>0.5)
+
+liste_genre_groupe_2 <- colnames(X)[ind_glmnet]
+```
+
+## Groupe 3 (age moyen 0,4)
+```{r}
+groupe3 <- table_age_sex_genre_diversite[table_cluster$groupe == 3, ]
+X=as.matrix(groupe3[,-c(1:4)])
+Y=as.numeric(groupe3[,3])
+
+
+###### Stability selection
+n=length(Y)
+p=dim(X)[2]
+nb_cores=4
+nb_repli=1000
+
+res.cum <- Reduce("+", mclapply(1:nb_repli, stabsel.glmnet, mc.cores=nb_cores))
+
+freq=res.cum/nb_repli
+
+ind_glmnet=which(freq>0.5)
+
+liste_genre_groupe_3 <- colnames(X)[ind_glmnet]
+```
+
+## Groupe 4 (age moyen 30)
+```{r}
+groupe4 <- table_age_sex_genre_diversite[table_cluster$groupe == 4, ]
+X=as.matrix(groupe4[,-c(1:4)])
+Y=as.numeric(groupe4[,3])
+
+
+###### Stability selection
+n=length(Y)
+p=dim(X)[2]
+nb_cores=4
+nb_repli=1000
+
+res.cum <- Reduce("+", mclapply(1:nb_repli, stabsel.glmnet, mc.cores=nb_cores))
+
+freq=res.cum/nb_repli
+
+ind_glmnet=which(freq>0.5)
+
+liste_genre_groupe_4 <- colnames(X)[ind_glmnet]
+```
+
+## Boxplot sur l'abondance selon les groupes
+
+```{r}
+# for (nom in colnames(table_analyse_abondance)[5:108]){
+#   formule = as.formula(paste0(nom, " ~ ", "groupe"))
+#   res.kruskal <- kruskal_test(formule, data=table_analyse_abondance)
+# 
+# pwc <- table_analyse_abondance %>% 
+#   dunn_test(formule, p.adjust.method = "bonferroni") 
+# pwc <- pwc %>% add_xy_position(x = "groupe")
+# 
+# ggboxplot(table_analyse_abondance, x = "groupe", y = nom, color="groupe") +
+#   stat_pvalue_manual(pwc, hide.ns = TRUE) +
+#   scale_color_manual(values=viridis(4))+
+#   labs(
+#     subtitle = get_test_label(res.kruskal, detailed = TRUE),
+#     caption = get_pwc_label(pwc))+
+#   scale_x_discrete(name ="Âge moyen du groupe", breaks=c("1","2","3", "4"),
+#         labels=c("37,5", "82", "0.5", "30"))
+# 
+# ggsave(paste('Resultats_clustering_spearman_ward_boxplot_', nom, '.png'),width=12, height=10, units = 'cm')
+
+
+# ggsave('Resultats_clustering_spearman_ward_boxplot_ruminococcus.png',width=12, height=10, units = 'cm')
+
+# ggplot(table_analyse_abondance)+
+#   aes(x=groupe, y= nom, color=groupe)+
+#   scale_color_manual(values=viridis(4))+
+#   geom_boxplot()
+#}
+
+```
+
+# RandomForest pour la prédiction des groupes
+## Mise en forme des données
+```{r}
+table_ramdomForest <- merge(table_age_sex_genre_diversite, table_cluster[,c(1,5)], by.x='Subject', by.y='Subject')
+compte <- table_ramdomForest %>%
+  count(groupe)
+nb_ind <- min(compte[,2]) - 5
+
+table_equilibre_randomForest <- c()
+for (gr in levels(table_ramdomForest$groupe)){
+  table_equilibre_randomForest_sa <- table_ramdomForest[which(table_ramdomForest$groupe == gr),]
+  echantillon <- sample_n(table_equilibre_randomForest_sa, nb_ind)
+  table_equilibre_randomForest <- rbind(table_equilibre_randomForest, echantillon)
+}
+
+table_equilibre_randomForest <- table_equilibre_randomForest [,-c(1:4)]
+table_ramdomForest <- table_ramdomForest [,-c(1:4)]
+write.table(table_ramdomForest, "table_ramdomForest_4_groupe.csv", row.names=FALSE, sep="t",dec=",", na=" ")
+```
+
+## Train et test dataset
+```{r}
+#train <- table_equilibre_randomForest
+#test <- anti_join(table_ramdomForest, train)
+```
+
+```{r}
+train <- table_ramdomForest %>% sample_frac(0.8)
+test <- anti_join(table_ramdomForest, train)
+```
+
+## Train et test du modèle
+```{r}
+set.seed(123)
+model <- randomForest(groupe ~ ., data = train, ntree = 500)
+model
+plot(model)
+```
+## Importances des variables
+```{r}
+varImpPlot(model)
+```
+Plus le MeanDecreaseGini est important, plus la variable est importante dans le modèle.
+
+# Prédiction
+```{r}
+test$predicted <- predict(model, test)
+conf <- confusionMatrix(data = test$predicted, reference = test$groupe)
+conf
+```
+
+
+```{r}
+global_accuracy <- c()
+class1_accuracy <- c()
+class2_accuracy <- c()
+class3_accuracy <- c()
+class4_accuracy <- c()
+for (i in 1:100){
+  train <- table_ramdomForest %>% sample_frac(0.8)
+  test <- anti_join(table_ramdomForest, train)
+  set.seed(123)
+  model <- randomForest(groupe ~ ., data = train, ntree = 500)
+  test$predicted <- predict(model, test)
+  conf <- confusionMatrix(data = test$predicted, reference = test$groupe)
+  global_accuracy <- c(global_accuracy, conf[["overall"]][["Accuracy"]])
+  class_acc <- as.data.frame(conf[["byClass"]])$`Balanced Accuracy`
+  class1_accuracy <- c(class1_accuracy, class_acc[1])
+  class2_accuracy <- c(class2_accuracy, class_acc[2])
+  class3_accuracy <- c(class3_accuracy, class_acc[3])
+  class4_accuracy <- c(class4_accuracy, class_acc[4])
+}
+```
+
+```{r}
+df_accu <- data_frame('Global accuracy' = global_accuracy, 
+                      G1 = class1_accuracy,
+                      G2 = class2_accuracy,
+                      G3 = class3_accuracy,
+                      G4 = class4_accuracy)
+```
+
+```{r}
+boxplot(df_accu)
+conf
+mean(global_accuracy)
+```
+
