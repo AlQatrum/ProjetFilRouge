@@ -143,7 +143,7 @@ ggplot(proportion_resultats_age)+
 ggsave('Resultats_clustering_spearman_ward_donut.png',width=12, height=8, units = 'cm')
 ```
 
-```{r donut repartition des classes d ages selon les cluster}
+```{r calcul repartition des classes d ages selon les cluster}
 # Calcul les poucentages cumulés (haut de chaque rectangle)
 proportion_resultats_cluster <- proportion_resultats %>%
   group_by(groupe)%>%
@@ -395,14 +395,14 @@ varImpPlot(model)
 ```
 Plus le MeanDecreaseGini est important, plus la variable est importante dans le modèle.
 
-# Prédiction
+## Prédiction
 ```{r}
 test$predicted <- predict(model, test)
 conf <- confusionMatrix(data = test$predicted, reference = test$groupe)
 conf
 ```
 
-
+## Accuracy sur 100 répétition
 ```{r}
 global_accuracy <- c()
 class1_accuracy <- c()
